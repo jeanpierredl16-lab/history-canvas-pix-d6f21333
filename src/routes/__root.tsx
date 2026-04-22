@@ -1,6 +1,9 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
+import { SyncBadge } from "@/components/SyncBadge";
+import { installAutoSync } from "@/lib/offline-queue";
 
 function NotFoundComponent() {
   return (
@@ -29,20 +32,25 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "theme-color", content: "#0a84ff" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Flebo Perú" },
+      { title: "Flebo Perú · Historias Clínicas Digitales" },
+      { name: "description", content: "Historias clínicas digitales para Flebo Perú. Funciona offline en tablet." },
+      { property: "og:title", content: "Flebo Perú · Historias Clínicas" },
+      { property: "og:description", content: "Historias clínicas digitales que funcionan offline en tablet." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", href: "/icon-512.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -65,5 +73,33 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  useEffect(() => {
+    // Always-on: queue auto-sync (works without service worker too).
+    installAutoSync();
+
+    // Service worker is OFF inside Lovable's preview iframe / preview hosts.
+    if (typeof window === "undefined") return;
+    const isInIframe = (() => {
+      try {
+        return window.self !== window.top;
+      } catch {
+        return true;
+      }
+    })();
+    const isPreviewHost =
+      window.location.hostname.includes("id-preview--") ||
+      window.location.hostname.includes("lovableproject.com");
+    if (isInIframe || isPreviewHost) {
+      navigator.serviceWorker?.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
+    }
+  }, []);
+
+  return (
+    <>
+      <Outlet />
+      <SyncBadge />
+    </>
+  );
 }
