@@ -4,6 +4,7 @@ import { uploadDataUrl, uploadFile } from "@/lib/upload";
 import { DrawingCanvas } from "./DrawingCanvas";
 import { SignaturePad } from "./SignaturePad";
 import legMap from "@/assets/leg-veins-map.png";
+import { enqueueVisita, syncNow } from "@/lib/offline-queue";
 
 const TARIFA = 170;
 
@@ -117,9 +118,41 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
       return;
     }
     setSavingVisita(true);
+    const montoNum = +monto;
+    const escleros = +(montoNum / TARIFA).toFixed(2);
+    const offline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    async function queueLocally(reason: string) {
+      await enqueueVisita({
+        paciente_dni: paciente.dni,
+        visita: {
+          paciente_dni: paciente.dni,
+          tipo,
+          monto_pagado: montoNum,
+          escleros_hoy: escleros,
+          notas: notas || null,
+        },
+        firmaPacienteDataUrl: firmaPac,
+        firmaMedicoDataUrl: firmaMed,
+      });
+      setMsg(`✓ Guardado localmente — se subirá automáticamente (${reason})`);
+      setMonto("");
+      setNotas("");
+      setFirmaPac(null);
+      setFirmaMed(null);
+      setAceptaConsent(false);
+    }
+
+    if (offline) {
+      try {
+        await queueLocally("sin conexión");
+      } finally {
+        setSavingVisita(false);
+      }
+      return;
+    }
+
     try {
-      const montoNum = +monto;
-      const escleros = +(montoNum / TARIFA).toFixed(2);
       let firmaPacUrl: string | null = null;
       let firmaMedUrl: string | null = null;
       if (firmaPac)
@@ -144,8 +177,15 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
       setFirmaMed(null);
       setAceptaConsent(false);
       await load();
+      // try to flush any older queued items now
+      void syncNow().then(() => load());
     } catch (e: any) {
-      setMsg("Error: " + e.message);
+      // Network/Supabase failure → fallback to local queue so nothing is lost
+      try {
+        await queueLocally("error de red, se reintentará");
+      } catch (qe: any) {
+        setMsg("Error: " + (e?.message ?? qe?.message ?? "desconocido"));
+      }
     } finally {
       setSavingVisita(false);
     }
