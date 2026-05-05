@@ -172,34 +172,97 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Patient header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-card p-6 shadow-sm">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Paciente
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {paciente.nombre}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            DNI {paciente.dni}
-            {paciente.edad ? ` · ${paciente.edad} años` : ""}
-            {paciente.sexo ? ` · ${paciente.sexo}` : ""}
-            {paciente.celular ? ` · ${paciente.celular}` : ""}
-          </p>
+      <div className="space-y-5 rounded-3xl bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Paciente
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {paciente.nombre}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              DNI {paciente.dni}
+              {paciente.edad ? ` · ${paciente.edad} años` : ""}
+              {paciente.sexo ? ` · ${paciente.sexo}` : ""}
+              {paciente.celular ? ` · ${paciente.celular}` : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setModal("historial")}
+              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:opacity-90"
+            >
+              <span aria-hidden>📋</span> Historial de Procedimientos
+            </button>
+            <button
+              onClick={onChangePaciente}
+              className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              Cambiar paciente
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setModal("historial")}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:opacity-90"
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <DataField label="Ocupación" value={paciente.ocupacion} />
+          <DataField
+            label="Procedencia"
+            value={
+              [paciente.provincia, paciente.distrito].filter(Boolean).join(" — ") ||
+              null
+            }
+          />
+          <DataField label="Medio" value={paciente.medio} />
+          <DataField
+            label="N° de Hijos"
+            value={
+              paciente.n_hijos !== null && paciente.n_hijos !== undefined
+                ? String(paciente.n_hijos)
+                : null
+            }
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div
+            className={`rounded-2xl border p-4 ${
+              paciente.alergias && paciente.alergias.trim()
+                ? "border-destructive/40 bg-destructive/10"
+                : "border-border bg-secondary/40"
+            }`}
           >
-            <span aria-hidden>📋</span> Historial de Procedimientos
-          </button>
-          <button
-            onClick={onChangePaciente}
-            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-secondary"
-          >
-            Cambiar paciente
-          </button>
+            <p
+              className={`text-xs font-semibold uppercase tracking-wider ${
+                paciente.alergias && paciente.alergias.trim()
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+              }`}
+            >
+              ⚠️ Alergias
+            </p>
+            <p
+              className={`mt-1 text-sm font-medium ${
+                paciente.alergias && paciente.alergias.trim()
+                  ? "text-destructive"
+                  : "text-foreground"
+              }`}
+            >
+              {paciente.alergias && paciente.alergias.trim()
+                ? paciente.alergias
+                : "Niega"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-secondary/40 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Patologías
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {paciente.patologias && paciente.patologias.trim()
+                ? paciente.patologias
+                : "No registra"}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -399,13 +462,13 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
 
               <div>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Esta sesión
+                  Historial reciente
                 </h4>
-                {sessionVisits.length === 0 ? (
+                {visitas.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Sin registros aún.</p>
                 ) : (
-                  <ul className="space-y-1.5">
-                    {sessionVisits.map((v) => (
+                  <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+                    {visitas.map((v) => (
                       <li
                         key={v.id}
                         className="flex items-center justify-between rounded-lg bg-card px-3 py-2 text-xs shadow-sm"
