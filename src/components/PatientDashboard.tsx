@@ -566,6 +566,20 @@ function tipoLabel(t: DocumentoGrafico["tipo"]) {
   return "Scanner venoso";
 }
 
+function DataField({ label, value }: { label: string; value: string | null | undefined }) {
+  const has = !!(value && String(value).trim());
+  return (
+    <div className="rounded-xl border border-border bg-secondary/30 px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className={`mt-0.5 text-sm ${has ? "font-medium" : "text-muted-foreground"}`}>
+        {has ? value : "No registra"}
+      </p>
+    </div>
+  );
+}
+
 function ActionCard({
   title,
   desc,
