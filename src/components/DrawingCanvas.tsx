@@ -31,6 +31,7 @@ export function DrawingCanvas({
     const ctx = bgCanvasRef.current.getContext("2d");
     if (!ctx) return;
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       ctx.clearRect(0, 0, width, height);
       // Cover-fit the image
