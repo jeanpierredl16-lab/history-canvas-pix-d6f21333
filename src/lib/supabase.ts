@@ -37,6 +37,9 @@ export type Visita = {
   firma_familiar_url?: string | null;
   dni_familiar?: string | null;
   acepta_terminos?: boolean | null;
+  medico_nombre?: string | null;
+  medico_cmp?: string | null;
+  medico_rne?: string | null;
   created_at?: string;
 };
 
