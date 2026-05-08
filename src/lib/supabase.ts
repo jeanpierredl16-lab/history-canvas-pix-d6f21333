@@ -30,9 +30,13 @@ export type Visita = {
   tipo: string;
   monto_pagado: number;
   escleros_hoy: number;
+  trombectomias_hoy?: number;
   notas: string | null;
   firma_paciente_url: string | null;
   firma_medico_url: string | null;
+  firma_familiar_url?: string | null;
+  dni_familiar?: string | null;
+  acepta_terminos?: boolean | null;
   created_at?: string;
 };
 
