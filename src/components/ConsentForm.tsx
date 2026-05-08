@@ -8,6 +8,18 @@ type Props = {
   onSaved: (v: Visita) => void;
 };
 
+type Medico = { id: string; nombre: string; cmp: string; rne: string };
+
+const MEDICOS: Medico[] = [
+  {
+    id: "evelyn",
+    nombre: "Dra. Evelyn Yngrid Gamarra Flores",
+    cmp: "045045",
+    rne: "050936",
+  },
+  { id: "otro", nombre: "Otro (editar manualmente)", cmp: "", rne: "" },
+];
+
 export function ConsentForm({ paciente, onSaved }: Props) {
   const [firmaPaciente, setFirmaPaciente] = useState<string | null>(null);
   const [firmaMedico, setFirmaMedico] = useState<string | null>(null);
@@ -17,15 +29,34 @@ export function ConsentForm({ paciente, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Visita | null>(null);
+  const [medicoId, setMedicoId] = useState<string>(MEDICOS[0].id);
+  const [medicoNombre, setMedicoNombre] = useState<string>(MEDICOS[0].nombre);
+  const [medicoCmp, setMedicoCmp] = useState<string>(MEDICOS[0].cmp);
+  const [medicoRne, setMedicoRne] = useState<string>(MEDICOS[0].rne);
+
+  function selectMedico(id: string) {
+    setMedicoId(id);
+    const m = MEDICOS.find((x) => x.id === id);
+    if (m && id !== "otro") {
+      setMedicoNombre(m.nombre);
+      setMedicoCmp(m.cmp);
+      setMedicoRne(m.rne);
+    } else {
+      setMedicoNombre("");
+      setMedicoCmp("");
+      setMedicoRne("");
+    }
+  }
 
   const valido = useMemo(() => {
     if (!firmaPaciente || !firmaMedico) return false;
+    if (!medicoNombre.trim() || !medicoCmp.trim() || !medicoRne.trim()) return false;
     if (requiereFamiliar) {
       if (!firmaFamiliar) return false;
       if (!/^\d{8}$/.test(dniFamiliar.trim())) return false;
     }
     return true;
-  }, [firmaPaciente, firmaMedico, requiereFamiliar, firmaFamiliar, dniFamiliar]);
+  }, [firmaPaciente, firmaMedico, requiereFamiliar, firmaFamiliar, dniFamiliar, medicoNombre, medicoCmp, medicoRne]);
 
   async function registrar() {
     setError(null);
@@ -48,7 +79,10 @@ export function ConsentForm({ paciente, onSaved }: Props) {
         tipo: "Consentimiento Escleroterapia",
         monto_pagado: 0,
         escleros_hoy: 0,
-        notas: "Consentimiento informado firmado",
+        notas: `Consentimiento informado firmado — Médico: ${medicoNombre} (CMP ${medicoCmp} / RNE ${medicoRne})`,
+        medico_nombre: medicoNombre,
+        medico_cmp: medicoCmp,
+        medico_rne: medicoRne,
         firma_paciente_url: urlPac,
         firma_medico_url: urlMed,
         firma_familiar_url: requiereFamiliar ? urlFam : null,
@@ -102,6 +136,51 @@ export function ConsentForm({ paciente, onSaved }: Props) {
 
   return (
     <div className="space-y-5">
+      <div className="rounded-2xl border border-border bg-secondary/30 p-4 space-y-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Médico Tratante
+          </span>
+          <select
+            value={medicoId}
+            onChange={(e) => selectMedico(e.target.value)}
+            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            {MEDICOS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="grid gap-3 md:grid-cols-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Nombre</span>
+            <input
+              value={medicoNombre}
+              onChange={(e) => setMedicoNombre(e.target.value)}
+              className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">CMP</span>
+            <input
+              value={medicoCmp}
+              onChange={(e) => setMedicoCmp(e.target.value)}
+              className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">R.N.E.</span>
+            <input
+              value={medicoRne}
+              onChange={(e) => setMedicoRne(e.target.value)}
+              className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+        </div>
+      </div>
+
       <div className="max-h-96 overflow-y-auto rounded-lg border bg-white p-4 text-sm leading-relaxed text-foreground">
         <h4 className="text-center text-base font-bold">
           CONSENTIMIENTO INFORMADO PARA ESCLEROTERAPIA
@@ -110,9 +189,10 @@ export function ConsentForm({ paciente, onSaved }: Props) {
           <strong>1.-</strong> Yo <strong>{paciente.nombre}</strong> con D.N.I. N°{" "}
           <strong>{paciente.dni}</strong> habiéndome explicado detalladamente en términos
           que puedo comprender, cuáles son los objetivos, las características, y los
-          eventuales efectos indeseables de la ESCLEROTERAPIA, autorizo a la Dra. Evelyn
-          Yngrid Gamarra Flores con habilidad CMP 045045 / R.N.E. 050936 a realizarme
-          dicho procedimiento.
+          eventuales efectos indeseables de la ESCLEROTERAPIA, autorizo a{" "}
+          <strong>{medicoNombre || "[Médico]"}</strong> con habilidad CMP{" "}
+          <strong>{medicoCmp || "[CMP]"}</strong> / R.N.E.{" "}
+          <strong>{medicoRne || "[RNE]"}</strong> a realizarme dicho procedimiento.
         </p>
         <p className="mt-3">
           <strong>2.-</strong> Se me explicó el procedimiento, el cual consiste en la
