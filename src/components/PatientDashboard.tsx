@@ -270,7 +270,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
 
       <div className="space-y-6">
         {/* Action buttons */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
           <ActionCard
             title="Nueva Nota a Mano"
             desc="Continúa la hoja actual o crea una nueva"
