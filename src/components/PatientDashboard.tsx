@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase, type DocumentoGrafico, type Paciente, type Visita } from "@/lib/supabase";
 import { uploadDataUrl, uploadFile } from "@/lib/upload";
 import { DrawingCanvas } from "./DrawingCanvas";
+import { ConsentForm } from "./ConsentForm";
 import legMap from "@/assets/leg-veins-map.png";
 
 type Props = {
@@ -14,7 +15,8 @@ type Modal =
   | "nota-choice"
   | "nota"
   | "scanner"
-  | "historial";
+  | "historial"
+  | "consentimiento";
 
 export function PatientDashboard({ paciente, onChangePaciente }: Props) {
   const [docs, setDocs] = useState<DocumentoGrafico[]>([]);
@@ -268,7 +270,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
 
       <div className="space-y-6">
         {/* Action buttons */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
           <ActionCard
             title="Nueva Nota a Mano"
             desc="Continúa la hoja actual o crea una nueva"
@@ -287,6 +289,12 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
             desc="Mapa de piernas — várices y trombos"
             onClick={() => setModal("scanner")}
             icon="🦵"
+          />
+          <ActionCard
+            title="Consentimiento Informado"
+            desc="Firma digital del paciente y médico"
+            onClick={() => setModal("consentimiento")}
+            icon="📝"
           />
         </div>
 
@@ -554,6 +562,18 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
               </table>
             </div>
           )}
+        </Modal>
+      )}
+
+      {modal === "consentimiento" && (
+        <Modal
+          title="Consentimiento Informado para Escleroterapia"
+          onClose={() => setModal(null)}
+        >
+          <ConsentForm
+            paciente={paciente}
+            onSaved={(v) => setVisitas((prev) => [v, ...prev])}
+          />
         </Modal>
       )}
     </div>
