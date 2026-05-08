@@ -564,6 +564,18 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
           )}
         </Modal>
       )}
+
+      {modal === "consentimiento" && (
+        <Modal
+          title="Consentimiento Informado para Escleroterapia"
+          onClose={() => setModal(null)}
+        >
+          <ConsentForm
+            paciente={paciente}
+            onSaved={(v) => setVisitas((prev) => [v, ...prev])}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
