@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase, type DocumentoGrafico, type Paciente, type Visita } from "@/lib/supabase";
 import { uploadDataUrl, uploadFile } from "@/lib/upload";
 import { DrawingCanvas } from "./DrawingCanvas";
+import { ConsentForm } from "./ConsentForm";
 import legMap from "@/assets/leg-veins-map.png";
 
 type Props = {
@@ -14,7 +15,8 @@ type Modal =
   | "nota-choice"
   | "nota"
   | "scanner"
-  | "historial";
+  | "historial"
+  | "consentimiento";
 
 export function PatientDashboard({ paciente, onChangePaciente }: Props) {
   const [docs, setDocs] = useState<DocumentoGrafico[]>([]);
@@ -287,6 +289,12 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
             desc="Mapa de piernas — várices y trombos"
             onClick={() => setModal("scanner")}
             icon="🦵"
+          />
+          <ActionCard
+            title="Consentimiento Informado"
+            desc="Firma digital del paciente y médico"
+            onClick={() => setModal("consentimiento")}
+            icon="📝"
           />
         </div>
 
