@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { SyncBadge } from "@/components/SyncBadge";
 import { installAutoSync } from "@/lib/offline-queue";
+import { AuthGate } from "@/components/AuthGate";
 
 function NotFoundComponent() {
   return (
@@ -98,7 +99,9 @@ function RootComponent() {
 
   return (
     <>
-      <Outlet />
+      <AuthGate>
+        <Outlet />
+      </AuthGate>
       <SyncBadge />
     </>
   );
