@@ -1,12 +1,40 @@
-import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
+// Webhook externo (Google Apps Script) para almacenamiento de archivos.
+// Reemplazar CODIGO_SECRETO_AQUI por el deployment ID real del Apps Script.
+const UPLOAD_WEBHOOK_URL =
+  "https://script.google.com/macros/s/CODIGO_SECRETO_AQUI/exec";
 
-function dataUrlToBlob(dataUrl: string): Blob {
+function splitDataUrl(dataUrl: string): { mime: string; base64: string } {
   const [header, base64] = dataUrl.split(",");
   const mime = header.match(/:(.*?);/)?.[1] || "image/png";
-  const bin = atob(base64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return new Blob([arr], { type: mime });
+  return { mime, base64 };
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function postToWebhook(filename: string, base64: string): Promise<string> {
+  const res = await fetch(UPLOAD_WEBHOOK_URL, {
+    method: "POST",
+    body: JSON.stringify({ filename, base64 }),
+  });
+  if (!res.ok) {
+    throw new Error(`Webhook upload failed: ${res.status}`);
+  }
+  const json = (await res.json()) as { success?: boolean; url?: string; error?: string };
+  if (!json.success || !json.url) {
+    throw new Error(json.error || "Webhook did not return a URL");
+  }
+  return json.url;
 }
 
 export async function uploadDataUrl(
@@ -14,15 +42,10 @@ export async function uploadDataUrl(
   pacienteDni: string,
   prefix: string
 ): Promise<string> {
-  const blob = dataUrlToBlob(dataUrl);
-  const ext = blob.type.split("/")[1] || "png";
-  const path = `${pacienteDni}/${prefix}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, blob, { contentType: blob.type, upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  const { mime, base64 } = splitDataUrl(dataUrl);
+  const ext = mime.split("/")[1] || "png";
+  const filename = `${pacienteDni}/${prefix}-${Date.now()}.${ext}`;
+  return postToWebhook(filename, base64);
 }
 
 export async function uploadFile(
@@ -31,11 +54,7 @@ export async function uploadFile(
   prefix: string
 ): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${pacienteDni}/${prefix}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  const filename = `${pacienteDni}/${prefix}-${Date.now()}.${ext}`;
+  const base64 = await fileToBase64(file);
+  return postToWebhook(filename, base64);
 }
