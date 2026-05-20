@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { supabase, type Paciente } from "@/lib/supabase";
+import type { Paciente } from "@/lib/supabase";
+import { patientService } from "@/services/patientService";
 
 type Props = {
   initialDni: string;
@@ -38,17 +39,14 @@ export function FiliationForm({ initialDni, onSaved, onCancel }: Props) {
       return;
     }
     setSaving(true);
-    const { data, error } = await supabase
-      .from("pacientes")
-      .insert(p)
-      .select()
-      .single();
-    setSaving(false);
-    if (error) {
-      setErr(error.message);
-      return;
+    try {
+      const data = await patientService.create(p);
+      onSaved(data);
+    } catch (e: any) {
+      setErr(e?.message ?? "Error al guardar");
+    } finally {
+      setSaving(false);
     }
-    onSaved(data as Paciente);
   }
 
   return (
