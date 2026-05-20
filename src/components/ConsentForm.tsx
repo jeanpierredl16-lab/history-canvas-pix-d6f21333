@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { supabase, type Paciente, type Visita } from "@/lib/supabase";
-import { uploadDataUrl } from "@/lib/upload";
+import type { Paciente, Visita } from "@/lib/supabase";
+import { uploadDataUrl } from "@/services/fileService";
+import { visitService } from "@/services/visitService";
 import { SignaturePad } from "./SignaturePad";
 
 type Props = {
@@ -91,14 +92,9 @@ export function ConsentForm({ paciente, onSaved }: Props) {
         created_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase
-        .from("visitas")
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      setSaved(data as Visita);
-      onSaved(data as Visita);
+      const data = await visitService.create(payload);
+      setSaved(data);
+      onSaved(data);
     } catch (e: any) {
       setError(e?.message ?? "Error al registrar");
     } finally {
