@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase, type Paciente } from "@/lib/supabase";
+import type { Paciente } from "@/lib/supabase";
+import { patientService } from "@/services/patientService";
 import { FiliationForm } from "@/components/FiliationForm";
 import { PatientDashboard } from "@/components/PatientDashboard";
 
 export const Route = createFileRoute("/")({
   component: Index,
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Flebo Perú · Historias Clínicas Digitales" },
@@ -32,21 +34,18 @@ function Index() {
     setErr(null);
     if (!dni.trim()) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("pacientes")
-      .select("*")
-      .eq("dni", dni.trim())
-      .maybeSingle();
-    setLoading(false);
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    if (data) {
-      setPaciente(data as Paciente);
-      setMode("patient");
-    } else {
-      setMode("new");
+    try {
+      const data = await patientService.findByDni(dni.trim());
+      if (data) {
+        setPaciente(data);
+        setMode("patient");
+      } else {
+        setMode("new");
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Error al buscar");
+    } finally {
+      setLoading(false);
     }
   }
 
