@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { authService } from "@/services/authService";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    authService.getSession().then(({ data }) => {
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-    });
+    const { data: sub } = authService.onAuthStateChange((s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -39,10 +37,7 @@ function LoginScreen() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const { error } = await authService.signInWithPassword(email.trim(), password);
     setLoading(false);
     if (error) setErr("Credenciales incorrectas. Verifica tu correo y contraseña.");
   }

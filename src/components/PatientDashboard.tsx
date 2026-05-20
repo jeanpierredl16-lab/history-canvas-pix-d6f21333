@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase, type DocumentoGrafico, type Paciente, type Visita } from "@/lib/supabase";
-import { uploadDataUrl, uploadFile } from "@/lib/upload";
+import type { DocumentoGrafico, Paciente, Visita } from "@/lib/supabase";
+import { uploadDataUrl, uploadFile } from "@/services/fileService";
+import { documentService } from "@/services/documentService";
+import { visitService } from "@/services/visitService";
+import { authService } from "@/services/authService";
 import { DrawingCanvas } from "./DrawingCanvas";
 import { ConsentForm } from "./ConsentForm";
 import legMap from "@/assets/leg-veins-map.png";
@@ -36,20 +39,16 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
   const [visitMsg, setVisitMsg] = useState<string | null>(null);
 
   async function load() {
-    const [d, v] = await Promise.all([
-      supabase
-        .from("documentos_graficos")
-        .select("*")
-        .eq("paciente_dni", paciente.dni)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("visitas")
-        .select("*")
-        .eq("paciente_dni", paciente.dni)
-        .order("created_at", { ascending: false }),
-    ]);
-    if (d.data) setDocs(d.data as DocumentoGrafico[]);
-    if (v.data) setVisitas(v.data as Visita[]);
+    try {
+      const [d, v] = await Promise.all([
+        documentService.listByDni(paciente.dni),
+        visitService.listByDni(paciente.dni),
+      ]);
+      setDocs(d);
+      setVisitas(v);
+    } catch (e) {
+      console.error("load patient data failed", e);
+    }
   }
 
   useEffect(() => {
@@ -91,13 +90,12 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
     setBusy(true);
     try {
       const url = await uploadDataUrl(dataUrl, paciente.dni, tipoDoc);
-      const { error } = await supabase.from("documentos_graficos").insert({
+      await documentService.create({
         paciente_dni: paciente.dni,
         tipo: tipoDoc,
         url,
         descripcion,
       });
-      if (error) throw error;
       await load();
     } catch (e: any) {
       alert("Error al guardar: " + e.message);
@@ -113,7 +111,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
     try {
       for (const f of Array.from(files)) {
         const url = await uploadFile(f, paciente.dni, "registro_antiguo");
-        await supabase.from("documentos_graficos").insert({
+        await documentService.create({
           paciente_dni: paciente.dni,
           tipo: "registro_antiguo",
           url,
@@ -152,14 +150,9 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
         firma_medico_url: null,
         created_at: createdAt,
       };
-      const { data, error } = await supabase
-        .from("visitas")
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      setSessionVisits((prev) => [data as Visita, ...prev]);
-      setVisitas((prev) => [data as Visita, ...prev]);
+      const data = await visitService.create(payload);
+      setSessionVisits((prev) => [data, ...prev]);
+      setVisitas((prev) => [data, ...prev]);
       setEscleros("");
       setTrombectomias("");
       setVisitMsg("✓ Visita guardada");
@@ -204,7 +197,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
               Cambiar paciente
             </button>
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => authService.signOut()}
               title="Cerrar sesión"
               className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-destructive/10 hover:text-destructive"
             >
