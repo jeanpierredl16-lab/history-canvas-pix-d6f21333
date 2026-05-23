@@ -177,7 +177,7 @@ export function ConsentForm({ paciente, onSaved }: Props) {
         </div>
       </div>
 
-      <div className="max-h-96 overflow-y-auto rounded-lg border bg-white p-4 text-sm leading-relaxed text-foreground">
+      <div className="max-h-96 overflow-y-auto rounded-lg border bg-white p-4 text-sm leading-relaxed text-foreground select-none touch-none">
         <h4 className="text-center text-base font-bold">
           CONSENTIMIENTO INFORMADO PARA ESCLEROTERAPIA
         </h4>
