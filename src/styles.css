@@ -93,6 +93,14 @@
     color: var(--color-foreground);
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* Re-enable text selection only for actual text inputs */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
   /* Larger touch targets for tablets */
   button, [role="button"] {
