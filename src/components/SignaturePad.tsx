@@ -25,10 +25,10 @@ export function SignaturePad({ label, onSave, value }: SignaturePadProps) {
 
   if (value) {
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 select-none">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <div className="rounded-xl border-2 border-success/40 bg-white p-2">
-          <img src={value} alt={label} className="h-32 w-full object-contain" />
+        <div className="rounded-xl border-2 border-success/40 bg-white p-2 select-none touch-none">
+          <img src={value} alt={label} className="h-32 w-full object-contain select-none" draggable={false} />
         </div>
         <button
           type="button"
@@ -42,14 +42,14 @@ export function SignaturePad({ label, onSave, value }: SignaturePadProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 select-none">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <div className="rounded-xl border-2 border-dashed border-border bg-white">
+      <div className="rounded-xl border-2 border-dashed border-border bg-white select-none touch-none">
         <SignatureCanvas
           ref={ref}
           penColor="#0a0a0a"
           canvasProps={{
-            className: "w-full h-32 rounded-xl",
+            className: "w-full h-32 rounded-xl touch-none select-none",
           }}
           onEnd={commit}
         />
