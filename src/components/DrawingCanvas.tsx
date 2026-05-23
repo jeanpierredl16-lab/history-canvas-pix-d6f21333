@@ -149,7 +149,7 @@ export function DrawingCanvas({
       </div>
 
       <div
-        className="relative w-full overflow-hidden rounded-2xl border-2 border-border bg-white shadow-inner"
+        className="relative w-full overflow-hidden rounded-2xl border-2 border-border bg-white shadow-inner select-none touch-none"
         style={{ aspectRatio: `${width}/${height}` }}
       >
         {backgroundImage && (
@@ -157,14 +157,14 @@ export function DrawingCanvas({
             ref={bgCanvasRef}
             width={width}
             height={height}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 h-full w-full select-none"
           />
         )}
         <canvas
           ref={canvasRef}
           width={width}
           height={height}
-          className="relative h-full w-full touch-none"
+          className="relative h-full w-full touch-none select-none"
           onPointerDown={start}
           onPointerMove={move}
           onPointerUp={end}
