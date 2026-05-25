@@ -428,6 +428,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
                 width={900}
                 height={1100}
                 backgroundImage={notaBg}
+                draftKey={`${paciente.dni}:nota`}
                 onCancel={() => setModal(null)}
                 onSave={(d) => saveDoc(d, "nota_manuscrita", "Nota a mano")}
               />
@@ -537,6 +538,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
             height={1024}
             backgroundImage={legMap}
             showColorTools
+            draftKey={`${paciente.dni}:scanner`}
             onCancel={() => setModal(null)}
             onSave={(d) => saveDoc(d, "scanner_venoso", "Mapa venoso")}
           />
