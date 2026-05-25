@@ -1,10 +1,13 @@
 import { useRef, useEffect, useState } from "react";
+import { draftStore } from "@/lib/drafts";
 
 type DrawingCanvasProps = {
   width?: number;
   height?: number;
   backgroundImage?: string;
   showColorTools?: boolean;
+  /** Clave única para autoguardar el dibujo en localStorage (p.ej. dni+contexto). */
+  draftKey?: string;
   onSave: (dataUrl: string) => void;
   onCancel: () => void;
 };
@@ -14,6 +17,7 @@ export function DrawingCanvas({
   height = 1100,
   backgroundImage,
   showColorTools = false,
+  draftKey,
   onSave,
   onCancel,
 }: DrawingCanvasProps) {
@@ -25,6 +29,7 @@ export function DrawingCanvas({
   const [lineWidth, setLineWidth] = useState(showColorTools ? 2.5 : 2);
   const drawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const autosaveT = useRef<number | null>(null);
 
   useEffect(() => {
     if (!backgroundImage || !bgCanvasRef.current) return;
@@ -44,6 +49,33 @@ export function DrawingCanvas({
     };
     img.src = backgroundImage;
   }, [backgroundImage, width, height]);
+
+  // Restaurar trazo persistido al montar
+  useEffect(() => {
+    if (!draftKey) return;
+    const saved = draftStore.get(`flebo:draft:canvas:${draftKey}`);
+    if (!saved || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, width, height);
+    img.src = saved;
+  }, [draftKey, width, height]);
+
+  function persistDraft() {
+    if (!draftKey || !canvasRef.current) return;
+    if (autosaveT.current) window.clearTimeout(autosaveT.current);
+    autosaveT.current = window.setTimeout(() => {
+      try {
+        draftStore.set(
+          `flebo:draft:canvas:${draftKey}`,
+          canvasRef.current!.toDataURL("image/png")
+        );
+      } catch {
+        /* quota */
+      }
+    }, 600);
+  }
 
   function getPoint(e: React.PointerEvent) {
     const canvas = canvasRef.current!;
@@ -77,11 +109,13 @@ export function DrawingCanvas({
   function end() {
     drawing.current = false;
     lastPoint.current = null;
+    persistDraft();
   }
 
   function clear() {
     const ctx = canvasRef.current?.getContext("2d");
     ctx?.clearRect(0, 0, width, height);
+    if (draftKey) draftStore.remove(`flebo:draft:canvas:${draftKey}`);
   }
 
   function save() {
@@ -94,6 +128,7 @@ export function DrawingCanvas({
     ctx.fillRect(0, 0, width, height);
     if (bgCanvasRef.current) ctx.drawImage(bgCanvasRef.current, 0, 0);
     if (canvasRef.current) ctx.drawImage(canvasRef.current, 0, 0);
+    if (draftKey) draftStore.remove(`flebo:draft:canvas:${draftKey}`);
     onSave(out.toDataURL("image/png"));
   }
 

@@ -7,6 +7,8 @@ import { authService } from "@/services/authService";
 import { DrawingCanvas } from "./DrawingCanvas";
 import { ConsentForm } from "./ConsentForm";
 import legMap from "@/assets/leg-veins-map.png";
+import { generateHistoriaPdf } from "@/lib/pdf";
+import { isOffline } from "@/lib/drafts";
 
 type Props = {
   paciente: Paciente;
@@ -29,6 +31,7 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
   const [notaContinuandoDe, setNotaContinuandoDe] = useState<DocumentoGrafico | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   // Visit panel state (inside note view)
   const [fecha, setFecha] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -135,6 +138,12 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
       setVisitMsg("Ingresa al menos una cantidad");
       return;
     }
+    if (isOffline()) {
+      alert(
+        "Sin conexión. Avance guardado en la tablet. Se subirá cuando vuelva la señal."
+      );
+      return;
+    }
     setSavingVisita(true);
     try {
       // Use the chosen date as created_at (noon to avoid TZ shifts)
@@ -158,9 +167,25 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
       setVisitMsg("✓ Visita guardada");
       setTimeout(() => setVisitMsg(null), 2000);
     } catch (err: any) {
-      setVisitMsg("Error: " + (err?.message ?? "desconocido"));
+      const msg = err?.message ?? "desconocido";
+      setVisitMsg(
+        /network|fetch|failed/i.test(msg)
+          ? "Sin conexión estable. El avance quedó en la tablet."
+          : "Error: " + msg
+      );
     } finally {
       setSavingVisita(false);
+    }
+  }
+
+  async function descargarHistoriaPdf() {
+    setPdfBusy(true);
+    try {
+      await generateHistoriaPdf(paciente, visitas, docs);
+    } catch (e: any) {
+      alert("No se pudo generar el PDF: " + (e?.message ?? "error desconocido"));
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -189,6 +214,14 @@ export function PatientDashboard({ paciente, onChangePaciente }: Props) {
               className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:opacity-90"
             >
               <span aria-hidden>📋</span> Historial de Procedimientos
+            </button>
+            <button
+              onClick={descargarHistoriaPdf}
+              disabled={pdfBusy}
+              title="Descargar historia clínica en PDF (papel membretado)"
+              className="flex items-center gap-2 rounded-full border border-primary/40 bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5 disabled:opacity-50"
+            >
+              <span aria-hidden>📄</span> {pdfBusy ? "Generando…" : "Descargar PDF"}
             </button>
             <button
               onClick={onChangePaciente}

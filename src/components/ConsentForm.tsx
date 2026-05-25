@@ -3,6 +3,8 @@ import type { Paciente, Visita } from "@/lib/supabase";
 import { uploadDataUrl } from "@/services/fileService";
 import { visitService } from "@/services/visitService";
 import { SignaturePad } from "./SignaturePad";
+import { useDraft, isOffline } from "@/lib/drafts";
+import { generateConsentimientoPdf } from "@/lib/pdf";
 
 type Props = {
   paciente: Paciente;
@@ -22,31 +24,61 @@ const MEDICOS: Medico[] = [
 ];
 
 export function ConsentForm({ paciente, onSaved }: Props) {
-  const [firmaPaciente, setFirmaPaciente] = useState<string | null>(null);
-  const [firmaMedico, setFirmaMedico] = useState<string | null>(null);
-  const [requiereFamiliar, setRequiereFamiliar] = useState(false);
-  const [dniFamiliar, setDniFamiliar] = useState("");
-  const [firmaFamiliar, setFirmaFamiliar] = useState<string | null>(null);
+  const draftKey = `flebo:draft:consent:${paciente.dni}`;
+  type Draft = {
+    firmaPaciente: string | null;
+    firmaMedico: string | null;
+    firmaFamiliar: string | null;
+    requiereFamiliar: boolean;
+    dniFamiliar: string;
+    medicoId: string;
+    medicoNombre: string;
+    medicoCmp: string;
+    medicoRne: string;
+  };
+  const [draft, setDraft, clearDraft] = useDraft<Draft>(draftKey, {
+    firmaPaciente: null,
+    firmaMedico: null,
+    firmaFamiliar: null,
+    requiereFamiliar: false,
+    dniFamiliar: "",
+    medicoId: MEDICOS[0].id,
+    medicoNombre: MEDICOS[0].nombre,
+    medicoCmp: MEDICOS[0].cmp,
+    medicoRne: MEDICOS[0].rne,
+  });
+  const firmaPaciente = draft.firmaPaciente;
+  const firmaMedico = draft.firmaMedico;
+  const firmaFamiliar = draft.firmaFamiliar;
+  const requiereFamiliar = draft.requiereFamiliar;
+  const dniFamiliar = draft.dniFamiliar;
+  const medicoId = draft.medicoId;
+  const medicoNombre = draft.medicoNombre;
+  const medicoCmp = draft.medicoCmp;
+  const medicoRne = draft.medicoRne;
+  const setFirmaPaciente = (v: string | null) => setDraft((d) => ({ ...d, firmaPaciente: v }));
+  const setFirmaMedico = (v: string | null) => setDraft((d) => ({ ...d, firmaMedico: v }));
+  const setFirmaFamiliar = (v: string | null) => setDraft((d) => ({ ...d, firmaFamiliar: v }));
+  const setRequiereFamiliar = (fn: (v: boolean) => boolean) =>
+    setDraft((d) => ({ ...d, requiereFamiliar: fn(d.requiereFamiliar) }));
+  const setDniFamiliar = (v: string) => setDraft((d) => ({ ...d, dniFamiliar: v }));
+  const setMedicoNombre = (v: string) => setDraft((d) => ({ ...d, medicoNombre: v }));
+  const setMedicoCmp = (v: string) => setDraft((d) => ({ ...d, medicoCmp: v }));
+  const setMedicoRne = (v: string) => setDraft((d) => ({ ...d, medicoRne: v }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Visita | null>(null);
-  const [medicoId, setMedicoId] = useState<string>(MEDICOS[0].id);
-  const [medicoNombre, setMedicoNombre] = useState<string>(MEDICOS[0].nombre);
-  const [medicoCmp, setMedicoCmp] = useState<string>(MEDICOS[0].cmp);
-  const [medicoRne, setMedicoRne] = useState<string>(MEDICOS[0].rne);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   function selectMedico(id: string) {
-    setMedicoId(id);
     const m = MEDICOS.find((x) => x.id === id);
-    if (m && id !== "otro") {
-      setMedicoNombre(m.nombre);
-      setMedicoCmp(m.cmp);
-      setMedicoRne(m.rne);
-    } else {
-      setMedicoNombre("");
-      setMedicoCmp("");
-      setMedicoRne("");
-    }
+    setDraft((d) => ({
+      ...d,
+      medicoId: id,
+      medicoNombre: m && id !== "otro" ? m.nombre : "",
+      medicoCmp: m && id !== "otro" ? m.cmp : "",
+      medicoRne: m && id !== "otro" ? m.rne : "",
+    }));
   }
 
   const valido = useMemo(() => {
@@ -63,6 +95,12 @@ export function ConsentForm({ paciente, onSaved }: Props) {
     setError(null);
     if (!valido) {
       setError("Faltan firmas o datos obligatorios.");
+      return;
+    }
+    if (isOffline()) {
+      alert(
+        "Sin conexión. El consentimiento queda guardado en la tablet. Reintenta el envío cuando vuelva la señal."
+      );
       return;
     }
     setSaving(true);
@@ -93,12 +131,40 @@ export function ConsentForm({ paciente, onSaved }: Props) {
       };
 
       const data = await visitService.create(payload);
+      clearDraft();
       setSaved(data);
       onSaved(data);
     } catch (e: any) {
-      setError(e?.message ?? "Error al registrar");
+      const msg = e?.message ?? "Error al registrar";
+      setError(
+        /network|fetch|failed/i.test(msg)
+          ? "Sin conexión estable. El avance quedó guardado en la tablet."
+          : msg
+      );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function descargarPdf() {
+    setPdfBusy(true);
+    try {
+      await generateConsentimientoPdf({
+        paciente,
+        medicoNombre,
+        medicoCmp,
+        medicoRne,
+        firmaPacienteUrl: saved?.firma_paciente_url ?? firmaPaciente!,
+        firmaMedicoUrl: saved?.firma_medico_url ?? firmaMedico!,
+        firmaFamiliarUrl:
+          (saved as any)?.firma_familiar_url ?? (requiereFamiliar ? firmaFamiliar : null),
+        dniFamiliar: requiereFamiliar ? dniFamiliar : null,
+        fecha: saved?.created_at ?? new Date().toISOString(),
+      });
+    } catch (e: any) {
+      alert("No se pudo generar el PDF: " + (e?.message ?? "error desconocido"));
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -111,6 +177,13 @@ export function ConsentForm({ paciente, onSaved }: Props) {
           <p className="mt-1 text-xs text-muted-foreground">
             Registrado el {new Date(saved.created_at!).toLocaleString("es-PE")}
           </p>
+          <button
+            onClick={descargarPdf}
+            disabled={pdfBusy}
+            className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow disabled:opacity-50"
+          >
+            {pdfBusy ? "Generando PDF…" : "📄 Descargar Consentimiento (PDF)"}
+          </button>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {saved.firma_paciente_url && (
@@ -318,6 +391,15 @@ export function ConsentForm({ paciente, onSaved }: Props) {
         className="w-full rounded-full bg-primary px-5 py-3.5 text-base font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:opacity-90 disabled:opacity-50"
       >
         {saving ? "Registrando…" : "Registrar Visita y Firmar"}
+      </button>
+
+      <button
+        type="button"
+        onClick={descargarPdf}
+        disabled={!valido || pdfBusy}
+        className="w-full rounded-full border-2 border-primary/30 bg-card px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/5 disabled:opacity-50"
+      >
+        {pdfBusy ? "Generando PDF…" : "📄 Vista previa / Descargar PDF (membretado)"}
       </button>
     </div>
   );
