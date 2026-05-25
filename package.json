@@ -87,5 +87,19 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
+  },
+  "overrides": {
+    "@tanstack/start-plugin-core": "1.169.20",
+    "@tanstack/start-server-core": "1.169.3",
+    "@tanstack/start-client-core": "1.169.3",
+    "@tanstack/react-start-server": "1.168.12",
+    "@tanstack/react-start-client": "1.168.12"
+  },
+  "resolutions": {
+    "@tanstack/start-plugin-core": "1.169.20",
+    "@tanstack/start-server-core": "1.169.3",
+    "@tanstack/start-client-core": "1.169.3",
+    "@tanstack/react-start-server": "1.168.12",
+    "@tanstack/react-start-client": "1.168.12"
   }
 }
