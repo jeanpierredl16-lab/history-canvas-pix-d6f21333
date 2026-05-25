@@ -92,14 +92,14 @@
     "@tanstack/start-plugin-core": "1.169.20",
     "@tanstack/start-server-core": "1.169.3",
     "@tanstack/start-client-core": "1.169.3",
-    "@tanstack/react-start-server": "1.168.12",
-    "@tanstack/react-start-client": "1.168.12"
+    "@tanstack/react-start-server": "1.167.8",
+    "@tanstack/react-start-client": "1.168.3"
   },
   "resolutions": {
     "@tanstack/start-plugin-core": "1.169.20",
     "@tanstack/start-server-core": "1.169.3",
     "@tanstack/start-client-core": "1.169.3",
-    "@tanstack/react-start-server": "1.168.12",
-    "@tanstack/react-start-client": "1.168.12"
+    "@tanstack/react-start-server": "1.167.8",
+    "@tanstack/react-start-client": "1.168.3"
   }
 }
