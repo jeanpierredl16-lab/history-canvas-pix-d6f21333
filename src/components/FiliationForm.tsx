@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Paciente } from "@/lib/supabase";
 import { patientService } from "@/services/patientService";
+import { useDraft, isOffline } from "@/lib/drafts";
 
 type Props = {
   initialDni: string;
@@ -24,7 +25,8 @@ const empty = (dni: string): Paciente => ({
 });
 
 export function FiliationForm({ initialDni, onSaved, onCancel }: Props) {
-  const [p, setP] = useState<Paciente>(empty(initialDni));
+  const draftKey = `flebo:draft:filiation:${initialDni}`;
+  const [p, setP, clearDraft] = useDraft<Paciente>(draftKey, empty(initialDni));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -38,12 +40,24 @@ export function FiliationForm({ initialDni, onSaved, onCancel }: Props) {
       setErr("DNI y Nombre son obligatorios");
       return;
     }
+    if (isOffline()) {
+      alert(
+        "Sin conexión. El avance del formulario queda guardado en la tablet y podrás reintentar el registro cuando vuelva la señal."
+      );
+      return;
+    }
     setSaving(true);
     try {
       const data = await patientService.create(p);
+      clearDraft();
       onSaved(data);
     } catch (e: any) {
-      setErr(e?.message ?? "Error al guardar");
+      const msg = e?.message ?? "Error al guardar";
+      setErr(
+        /network|fetch|failed/i.test(msg)
+          ? "Sin conexión estable. El avance quedó guardado en la tablet. Reintenta cuando vuelva la señal."
+          : msg
+      );
     } finally {
       setSaving(false);
     }
